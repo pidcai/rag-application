@@ -1,0 +1,7 @@
+pinecone 
+langchain_cohere
+langchain_community 
+langchain_pinecone 
+cohere==5.15.0
+streamlit
+python-dotenv
