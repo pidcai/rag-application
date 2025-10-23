@@ -19,7 +19,7 @@ retriever=init_pinecone_retriever()#[CHANGE THE INIT FUNCTION] use init_oracle_2
 
 if __name__ == "__main__":
 
-    st.header("Pi Chatbot")
+    st.header("Divi Chatbot")
 
         
     # [DONT CHANGE] check if the messages list is empty. If empty, initialize the messages list
