@@ -6,10 +6,14 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()  # Loads variables from .env
+# Load local .env only if it exists
+if os.path.exists(".env"):
+    load_dotenv()
+
 
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+
 # from langchain_groq import ChatGroq
 import requests
 import streamlit as st
