@@ -8,7 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    env:
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
