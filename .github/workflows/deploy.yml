@@ -17,13 +17,28 @@ jobs:
       - name: Python security checks
         run: |
           pip install safety bandit
-          bandit -r . || true
-          safety check -r requirements.txt || true
+          bandit -r . -f html -o bandit-report.html
+          safety check -r requirements.txt --json > safety-report.json
+        continue-on-error: true
+
+      - name: Upload reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.html
+            safety-report.json
 
       - name: Lint and style check
         run: |
           pip install flake8
-          flake8 . || true
+          flake8 . > flake8-report.txt || true
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake8-report
+          path: flake8-report.txt
 
       # --- Deployment Phase ---
       - name: Deploy to GCP VM
