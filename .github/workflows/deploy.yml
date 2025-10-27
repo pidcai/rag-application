@@ -38,8 +38,18 @@ jobs:
         run: |
           pip install safety bandit
           bandit -r . -f html -o bandit-report.html || true
-          safety check -r requirements.txt --full-report || true
-          safety check -r requirements.txt --json > safety-report.json || true
+          safety scan --file=requirements.txt --full-report || true
+          safety scan --file=requirements.txt --json > safety-report.json || true
+
+          echo "📊 Checking for high or critical vulnerabilities..."
+          HIGH_COUNT=$(jq '[.issues[] | select(.severity == "high" or .severity == "critical")] | length' safety-report.json)
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo " Found $HIGH_COUNT high/critical vulnerabilities!"
+            exit 1
+          else
+            echo " No high/critical vulnerabilities found."
+          fi
         continue-on-error: true
 
       - name: Upload security reports
