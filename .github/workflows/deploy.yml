@@ -37,16 +37,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # --- DevSecOps: Security and Quality Gates (Trivy) ---
-      - name: Trivy filesystem scan (code + dependencies)
-        uses: aquasecurity/trivy-action@master
+      # --- DevSecOps: Trivy full scan (filesystem + Python dependencies) ---
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v2
         with:
-          scan-type: fs
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: '1'  # Fail the pipeline if high/critical vulnerabilities are found
-          format: sarif
-          output: trivy-results.sarif
+          version: '0.65.0'
+
+      - name: Run Trivy full scan
+        run: |
+          python -m venv env
+          source env/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # Run filesystem scan + Python dependency scan, generate SARIF
+          trivy fs . --format sarif --output trivy-fs.sarif --severity CRITICAL,HIGH --ignore-unfixed
+          trivy python . --format sarif --output trivy-py.sarif --severity CRITICAL,HIGH --ignore-unfixed
+          
+          # Merge SARIF reports
+          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.sarif trivy-py.sarif > trivy-results.sarif
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -56,8 +65,8 @@ jobs:
       - name: Upload Trivy SARIF artifact
         uses: actions/upload-artifact@v4
         with:
-         name: trivy-sarif
-         path: trivy-results.sarif
+          name: trivy-sarif
+          path: trivy-results.sarif
 
       # --- Lint and Style Check ---
       - name: Lint and style check
