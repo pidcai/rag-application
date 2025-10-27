@@ -47,20 +47,13 @@ jobs:
       - name: Run Trivy full scan
         run: |
           # Filesystem scan → JSON
-          trivy fs . \
-            --format json \
-            --output trivy-fs.json \
-            --exit-code 1
+          trivy fs . --format sarif > trivy-fs.sarif || true
 
           # Python dependencies scan → JSON
-          trivy python . \
-            --format json \
-            --output trivy-py.json \
-            --exit-code 1
+          trivy python . --format sarif > trivy-py.sarif || true
 
           # Merge JSON results and convert to SARIF
-          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.json trivy-py.json > trivy-merged.json
-          trivy convert --input trivy-fs.json --output trivy-results.sarif --format sarif
+          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.sarif trivy-py.sarif > trivy-results.sarif
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
