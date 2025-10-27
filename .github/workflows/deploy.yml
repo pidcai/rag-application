@@ -46,25 +46,20 @@ jobs:
 
       - name: Run Trivy full scan
         run: |
-          # Filesystem scan → JSON
-          trivy fs . --format sarif > trivy-fs.sarif || true
+          # Filesystem scan → Table
+          trivy fs . --format table > trivy-fs.txt || true
 
-          # Python dependencies scan → JSON
-          trivy python . --format sarif > trivy-py.sarif || true
+          # Python dependencies scan → Table
+          trivy python . --format table > trivy-py.txt || true
 
-          # Merge JSON results and convert to SARIF
-          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.sarif trivy-py.sarif > trivy-results.sarif
+          # Merge table reports into a single file
+          cat trivy-fs.txt trivy-py.txt > trivy-report.txt
 
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-results.sarif
-
-      - name: Upload Trivy SARIF artifact
+      - name: Upload Trivy table report
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-sarif
-          path: trivy-results.sarif
+          name: trivy-table-report
+          path: trivy-report.txt
 
       # --- Lint and Style Check ---
       - name: Lint and style check
