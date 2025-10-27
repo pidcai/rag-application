@@ -39,9 +39,10 @@ jobs:
 
       # --- DevSecOps: Trivy full scan (filesystem + Python dependencies) ---
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v2
+        uses: aquasecurity/setup-trivy@v0.2.4
         with:
           version: '0.65.0'
+          cache: true
 
       - name: Run Trivy full scan
         run: |
