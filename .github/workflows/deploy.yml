@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read         # allows checking out code
+  security-events: write # allows uploading SARIF/code scanning results
+
 concurrency:
   group: deploy-main
   cancel-in-progress: true
