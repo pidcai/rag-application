@@ -6,8 +6,8 @@ on:
       - main
 
 permissions:
-  contents: read         # allows checking out code
-  security-events: write # allows uploading SARIF/code scanning results
+  contents: read
+  security-events: write
 
 concurrency:
   group: deploy-main
@@ -46,17 +46,25 @@ jobs:
 
       - name: Run Trivy full scan
         run: |
-          python -m venv env
-          source env/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          # Run filesystem scan + Python dependency scan, generate SARIF
-          trivy fs . --format sarif --output trivy-fs.sarif --severity CRITICAL,HIGH --ignore-unfixed
-          trivy python . --format sarif --output trivy-py.sarif --severity CRITICAL,HIGH --ignore-unfixed
-          
-          # Merge SARIF reports
-          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.sarif trivy-py.sarif > trivy-results.sarif
+          # Filesystem scan → JSON
+          trivy fs . \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format json \
+            --output trivy-fs.json
+
+          # Python dependencies scan → JSON
+          trivy python . \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --format json \
+            --output trivy-py.json
+
+          # Merge JSON results and convert to SARIF
+          jq -s '.[0].runs += .[1].runs | .[0]' trivy-fs.json trivy-py.json > trivy-merged.json
+          trivy convert --input trivy-merged.json --output trivy-results.sarif --format sarif
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
