@@ -1,4 +1,4 @@
-name: Deploy Streamlit RAG App to GCP VM
+name: Streamlit RAG App CI/CD (Trivy + Deploy)
 
 on:
   push:
@@ -14,19 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    env:
-      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+  # ====================================
+  # 🔍 Security & Lint Scan Job
+  # ====================================
+  security-scan:
+    name: Security Scan (Trivy + Lint)
+    runs-on: self-hosted
 
     steps:
-      # --- Checkout Source Code ---
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      # --- Setup Python Environment ---
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -37,31 +35,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # --- DevSecOps: Trivy full scan (filesystem + Python dependencies) ---
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.3
-        with:
-          version: v0.61.0
-          cache: true
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y
+          sudo apt-get install -y trivy
 
       - name: Run Trivy full scan
-        run: |
-          # Filesystem scan → Table
-          trivy fs . --format table > trivy-fs.txt || true
+        run: trivy fs --format table -o fs-report.json .
 
-          # Python dependencies scan → Table
-          trivy python . --format table > trivy-py.txt || true
+      - name: Gitleaks Installation
+        run: sudo apt install gitleaks -y
+      - name: Gitleaks Code Scan
+        run: gitleaks detect source . -r gitleaks-report.json -f json
 
-          # Merge table reports into a single file
-          cat trivy-fs.txt trivy-py.txt > trivy-report.txt
-
-      - name: Upload Trivy table report
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-table-report
-          path: trivy-report.txt
-
-      # --- Lint and Style Check ---
       - name: Lint and style check
         run: |
           pip install flake8
@@ -73,50 +62,43 @@ jobs:
           name: flake8-report
           path: flake8-report.txt
 
-      # --- Deployment Phase ---
-      - name: Deploy to GCP VM
-        uses: appleboy/ssh-action@v1.1.0
-        with:
-          host: ${{ secrets.GCP_HOST }}
-          username: ${{ secrets.GCP_USER }}
-          key: ${{ secrets.GCP_SSH_KEY }}
-          port: ${{ secrets.GCP_PORT || 22 }}
-          envs: COHERE_API_KEY,PINECONE_API_KEY
-          script: |
-            set -e
+  # ====================================
+  # 🚀 Local Deploy Job
+  # ====================================
+  deploy:
+    name: Deploy Streamlit App (Local)
+    runs-on: self-hosted
+    needs: security-scan  # ✅ run only after scan
 
-            echo "Stopping existing Streamlit app (if any)..."
-            sudo fuser -k 8501/tcp || true
+    env:
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
 
-            echo "Installing dependencies..."
-            sudo apt update -y
-            sudo apt install -y python3 python3-venv python3-pip git curl
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-            echo "Removing old app and cloning latest version..."
-            rm -rf rag-application
-            git clone https://github.com/pidcai/rag-application.git
-            cd rag-application
+      - name: Set up and launch Streamlit app
+        run: |
+          set -e
+          echo "Stopping existing Streamlit app..."
+          sudo fuser -k 8501/tcp || true
 
-            echo "Setting up Python virtual environment..."
-            python3 -m venv env
-            source env/bin/activate
+          echo "Setting up virtual environment..."
+          python3 -m venv env
+          source env/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-            echo "Installing Python requirements..."
-            pip install --upgrade pip
-            pip install -r requirements.txt
+          echo "Starting Streamlit app..."
+          nohup env COHERE_API_KEY="$COHERE_API_KEY" \
+                    PINECONE_API_KEY="$PINECONE_API_KEY" \
+                    streamlit run streamlit_ui.py > streamlit.log 2>&1 &
 
-            echo "Launching Streamlit app..."
-            nohup env COHERE_API_KEY="$COHERE_API_KEY" \
-                      PINECONE_API_KEY="$PINECONE_API_KEY" \
-                      streamlit run streamlit_ui.py > streamlit.log 2>&1 &
-
-            echo "Waiting for Streamlit to start..."
-            sleep 5
-
-            echo "Checking Streamlit app status..."
-            if curl -f http://localhost:8501 > /dev/null 2>&1; then
-              echo "✅ Streamlit app deployed successfully!"
-            else
-              echo "⚠️ Warning: Streamlit app may not have started yet."
-            fi
+          sleep 5
+          if curl -f http://localhost:8501 > /dev/null 2>&1; then
+            echo "✅ Streamlit app deployed successfully!"
+          else
+            echo "⚠️ Warning: Streamlit app may not have started yet."
+          fi
 
