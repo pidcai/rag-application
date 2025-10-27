@@ -50,8 +50,11 @@ jobs:
       - name: Gitleaks Code Scan
         run: gitleaks detect source . -r gitleaks-report.json -f json
 
-      - name: Lint and style check
+      - name: Set up Python venv
         run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
           pip install flake8
           flake8 . > flake8-report.txt || true
 
