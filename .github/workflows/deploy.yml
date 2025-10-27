@@ -79,28 +79,43 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+      
+      - name: Deploy to GCP VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_PORT || 22 }}
+          envs: COHERE_API_KEY,PINECONE_API_KEY
+          script: |
+            set -e
 
-      - name: Set up and launch Streamlit app
-        run: |
-          set -e
-          echo "Stopping existing Streamlit app..."
-          sudo fuser -k 8501/tcp || true
+            echo "Stopping existing Streamlit app..."
+            sudo fuser -k 8501/tcp || true
 
-          echo "Setting up virtual environment..."
-          python3 -m venv env
-          source env/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+            echo "Installing dependencies..."
+            sudo apt update -y
+            sudo apt install -y python3 python3-venv python3-pip git curl
 
-          echo "Starting Streamlit app..."
-          nohup env COHERE_API_KEY="$COHERE_API_KEY" \
-                    PINECONE_API_KEY="$PINECONE_API_KEY" \
-                    streamlit run streamlit_ui.py > streamlit.log 2>&1 &
+            echo "Removing old app directory..."
+            rm -rf ~/rag-application
+            mkdir -p ~/rag-application
+            cp -r $GITHUB_WORKSPACE/* ~/rag-application/
+            cd ~/rag-application
 
-          sleep 5
-          if curl -f http://localhost:8501 > /dev/null 2>&1; then
-            echo "✅ Streamlit app deployed successfully!"
-          else
-            echo "⚠️ Warning: Streamlit app may not have started yet."
-          fi
+            echo "Setting up virtual environment..."
+            python3 -m venv env
+            source env/bin/activate
 
+            echo "Installing Python requirements..."
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            echo "Launching Streamlit app in background..."
+            nohup env COHERE_API_KEY="$COHERE_API_KEY" \
+                      PINECONE_API_KEY="$PINECONE_API_KEY" \
+                      streamlit run streamlit_ui.py > streamlit.log 2>&1 &
+            disown
+
+            echo "✅ Streamlit deployment triggered!"
