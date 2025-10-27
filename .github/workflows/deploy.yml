@@ -53,6 +53,12 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
+      - name: Upload Trivy SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+         name: trivy-sarif
+         path: trivy-results.sarif
+
       # --- Lint and Style Check ---
       - name: Lint and style check
         run: |
