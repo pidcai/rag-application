@@ -46,9 +46,7 @@ jobs:
 
       - name: Run Trivy full scan
         run: |
-          mkdir trivy_scan
-          cp rag_pipeline.py requirements.txt streamlit_ui.py trivy_scan/
-          trivy fs --scanners vuln --skip-dirs env --format table -o fs-report.json trivy_scan
+          trivy fs --scanners vuln --format table -o fs-report.json .
           
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
