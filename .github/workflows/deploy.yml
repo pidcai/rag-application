@@ -37,16 +37,10 @@ jobs:
 
       - name: Install Trivy
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          # Clean up old Trivy list if it exists
           sudo rm -f /etc/apt/sources.list.d/trivy.list
-          # Add the new Trivy repo key (use modern keyring method)
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
-            sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
-          # Add Trivy repo (no duplicates now)
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | \
-            sudo tee /etc/apt/sources.list.d/trivy.list > /dev/null
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt-get update -y
           sudo apt-get install -y trivy
 
