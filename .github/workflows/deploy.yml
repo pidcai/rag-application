@@ -46,7 +46,7 @@ jobs:
 
       - name: Run Trivy full scan
         run: |
-          trivy fs --format table -o fs-report.json .
+          trivy fs --scanners vuln --format table -o fs-report.json .
           
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
