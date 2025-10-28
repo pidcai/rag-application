@@ -56,7 +56,8 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip
           pip install flake8
-          flake8 . > flake8-report.txt || true
+          # Exclude common folders: venv, env, __pycache__, .git, migrations
+          flake8 . --exclude=venv,env,__pycache__,.git,migrations > flake8-report.txt || true
 
       - name: Upload lint report
         uses: actions/upload-artifact@v4

@@ -24,7 +24,7 @@ retriever = (
 
 if __name__ == "__main__":
 
-    st.header("Pi Chatbot3")
+    st.header("Pi Chatbot4")
 
     # [DONT CHANGE] check if the messages list is empty. If empty, initialize the messages list
     if "messages" not in st.session_state:
