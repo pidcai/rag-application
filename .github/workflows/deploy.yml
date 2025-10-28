@@ -45,7 +45,13 @@ jobs:
           sudo apt-get install -y trivy
 
       - name: Run Trivy full scan
-        run: trivy fs --format table -o fs-report.json .
+        run: trivy fs --scanners vuln --skip-dirs env --format table -o fs-report.json .
+
+      - name: Upload Trivy scan report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: fs-report.json
 
       - name: Gitleaks Code Scan
         run: gitleaks detect source . -r gitleaks-report.json -f json
