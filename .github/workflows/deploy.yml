@@ -104,28 +104,27 @@ jobs:
             sudo apt update
             sudo apt install -y python3 python3-venv python3-pip git curl
 
-            echo "Removing old app directory..."
-            rm -rf ~/rag-application
-            mkdir -p ~/rag-application
+            echo "present working directory"
+            echo "${pwd}"
 
-            echo "GITHUB_WORKSPACE is: $GITHUB_WORKSPACE"
-            ls -la "$GITHUB_WORKSPACE"
+            echo "Removing old app..."
+            rm -rf rag-application
 
-            cp -r "$GITHUB_WORKSPACE"/. ~/rag-application/
-            cd ~/rag-application
+            echo "Cloning latest repo..."
+            git clone https://github.com/pidcai/rag-application.git
+            cd rag-application
 
-            echo "Setting up virtual environment..."
+            echo "Setting up Python virtual environment..."
             python3 -m venv env
             source env/bin/activate
 
-            echo "Installing Python requirements..."
+            echo "Installing requirements..."
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            echo "Launching Streamlit app in background..."
-            nohup env COHERE_API_KEY="$COHERE_API_KEY" \
-                      PINECONE_API_KEY="$PINECONE_API_KEY" \
-                      streamlit run streamlit_ui.py > streamlit.log 2>&1 &
-            disown
+            echo "Launching Streamlit app..."
+            nohup bash -c 'COHERE_API_KEY="${{ secrets.COHERE_API_KEY }}" \
+            PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
+            streamlit run streamlit_ui.py > streamlit.log 2>&1 &'
 
             echo "✅ Streamlit deployment triggered!"
