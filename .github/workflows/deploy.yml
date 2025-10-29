@@ -82,10 +82,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Set fail to false so the step completes and the report is written,
+          # even if secrets are found. The report is uploaded next.
+          fail: 'false'
           # Explicitly set the path to scan the current directory
           path: .
           # Ensure SARIF report is written to this file
-          report: 'gitleaks-results.sarif' 
+          report: 'gitleaks-results.sarif'
+          
+      # --- Verification Step (Keep this for now!) ---
+      - name: Verify Gitleaks SARIF File
+        run: |
+          ls -l gitleaks-results.sarif || { echo "Gitleaks SARIF file creation failed. Check Gitleaks Scan logs!"; exit 1; }
           
       - name: Upload Gitleaks results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3 
