@@ -36,15 +36,16 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Trivy static analysis
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: 'fs'
-          format: table
-          scan-ref: .
-          output: trivy-results.txt
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
-          exit-code: 1
+        run: |
+          # Clean up any old Trivy source entries
+          sudo rm -f /etc/apt/sources.list.d/trivy.list
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+          trivy fs . --ignore-unfixed --severity HIGH,CRITICAL --format table > trivy-results.txt
+
                 
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
