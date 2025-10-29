@@ -54,7 +54,12 @@ jobs:
           path: trivy-results.txt
 
       - name: Gitleaks Code Scan
-        run: gitleaks detect source . -r gitleaks-report.json -f json
+        run: |
+          sudo apt-get install -y wget
+          wget https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
+          tar -xvzf gitleaks_8.28.0_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks detect source . -r gitleaks-report.json -f json
 
       - name: Set up Python venv
         run: |
