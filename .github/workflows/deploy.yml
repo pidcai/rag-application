@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # ====================================
-  # 🔍 Security & Lint Scan Job
+  #  Security & Lint Scan Job
   # ====================================
   security-scan:
     name: Security Scan (Trivy + Lint)
@@ -73,12 +73,12 @@ jobs:
           path: flake8-report.txt
 
   # ====================================
-  # 🚀 Local Deploy Job
+  #  Local Deploy Job
   # ====================================
   deploy:
     name: Deploy Streamlit App (Local)
     runs-on: self-hosted
-    needs: security-scan  # ✅ run only after scan
+    needs: security-scan  # run only after scan
 
     env:
       COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
@@ -129,4 +129,4 @@ jobs:
             PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
             streamlit run streamlit_ui.py > streamlit.log 2>&1 &'
 
-            echo "✅ Streamlit deployment triggered!"
+            echo " Streamlit deployment triggered!"
