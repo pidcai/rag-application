@@ -38,15 +38,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # --- Fix for 'file changed as we read it' error ---
       - name: Create app archive for deployment
-        # Create a clean archive to be deployed to the remote VM
-        run: tar -czf app.tar.gz --exclude='./.git' --exclude='./env' --exclude='./app.tar.gz' .
-
+        # Write archive to the parent directory (../app.tar.gz) to avoid the race condition.
+        # Exclude common temporary folders.
+        run: tar -czf ../app.tar.gz --exclude='./.git' --exclude='./venv' --exclude='./env' --exclude='./__pycache__' .
+        
       - name: Upload app archive artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-archive
-          path: app.tar.gz
+          # The archive file is located in the parent directory, but actions/upload-artifact can find it
+          path: app.tar.gz 
           retention-days: 1 # Keep artifact for a short time
 
   # ====================================
