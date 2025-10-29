@@ -100,8 +100,8 @@ jobs:
           echo "Starting Gitleaks scan..."
           gitleaks detect \
             --source=. \
-            --format=sarif \
-            --report-path=gitleaks-results.sarif || true
+            -f sarif \
+            -r gitleaks-results.sarif || true
           
       - name: Verify Gitleaks SARIF File
         # Removed the 'exit 1' part of the debug step to prevent unnecessary job failure 
