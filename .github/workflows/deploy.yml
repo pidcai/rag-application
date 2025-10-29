@@ -76,24 +76,23 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
           
-      # --- Gitleaks Secret Scan (using dedicated action) ---
-      - name: Gitleaks Scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          #  FIX APPLIED: Force Gitleaks to complete and write the report, 
-          # even if secrets are found.
-          fail: 'false'
-          # Explicitly set the path to scan the current directory
-          path: .
-          report: 'gitleaks-results.sarif' 
+      # --- Gitleaks Secret Scan (Direct Execution) ---
+      - name: Gitleaks Scan (Direct)
+        run: |
+          # 1. Install Gitleaks directly (ensures the binary is available)
+          curl -sL https://github.com/gitleaks/gitleaks/releases/download/v8.18.3/gitleaks_8.18.3_linux_x64.tar.gz | tar xz
           
-      # --- DEBUG STEP: Verify file existence ---
+          # 2. Run Gitleaks directly against the current directory, outputting SARIF.
+          # We use || true to ensure the script does NOT fail the job if a secret is found,
+          # allowing the report to be uploaded.
+          ./gitleaks detect \
+            --source=. \
+            --format=sarif \
+            --report-path=gitleaks-results.sarif || true
+          
+      # --- Verification Step (Final Check) ---
       - name: Verify Gitleaks SARIF File
-        # Removed the 'exit 1' part of the debug step to prevent unnecessary job failure 
-        # while troubleshooting, but the file check remains.
-        run: ls -l gitleaks-results.sarif || echo "Gitleaks SARIF file not found after scan."
+        run: ls -l gitleaks-results.sarif
           
       - name: Upload Gitleaks results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3 
