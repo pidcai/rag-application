@@ -36,7 +36,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Trivy static analysis
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           format: table
@@ -45,8 +45,6 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           exit-code: 1
-          # On a subsequent call to the action we know trivy is already installed so can skip this
-          skip-setup-trivy: true
                 
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
