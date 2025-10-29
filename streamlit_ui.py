@@ -24,7 +24,7 @@ retriever = (
 
 if __name__ == "__main__":
 
-    st.header("Pi Divi Chatbot")
+    st.header("Pi Divi New Chatbot")
 
     # [DONT CHANGE] check if the messages list is empty. If empty, initialize the messages list
     if "messages" not in st.session_state:

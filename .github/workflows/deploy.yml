@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  # Required to upload security results to GitHub Security tab
   security-events: write
 
 concurrency:
@@ -15,125 +16,166 @@ concurrency:
 
 jobs:
   # ====================================
-  #  Security & Lint Scan Job
+  #  Setup & Install Dependencies
   # ====================================
-  security-scan:
-    name: Security Scan (Trivy + Lint)
+  setup-environment:
+    name: Setup Environment
     runs-on: ubuntu-latest
-
+    
+    # This job sets up the environment and artifacts needed by the next jobs
+    
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Verify Python version
-        run: python3 --version
+      - name: Set up Python
+        # Use a specific Python version, e.g., 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' 
+          cache: 'pip' # Caches dependencies for faster installs
 
       - name: Install dependencies
-        run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Run Trivy static analysis
-        run: |
-          # Clean up any old Trivy source entries
-          sudo rm -f /etc/apt/sources.list.d/trivy.list
-          sudo apt-get install wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy -y
-          trivy fs . --ignore-unfixed --severity HIGH,CRITICAL --format table > trivy-results.txt
+      - name: Create app archive for deployment
+        # Create a clean archive to be deployed to the remote VM
+        run: tar -czf app.tar.gz --exclude='./.git' --exclude='./env' .
 
-                
-      - name: Upload Trivy scan report
+      - name: Upload app archive artifact
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report
-          path: trivy-results.txt
+          name: app-archive
+          path: app.tar.gz
+          retention-days: 1 # Keep artifact for a short time
 
-      - name: Gitleaks Code Scan
-        run: |
-          sudo apt-get install -y wget
-          wget https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
-          tar -xvzf gitleaks_8.28.0_linux_x64.tar.gz
-          sudo mv gitleaks /usr/local/bin/
-          pwd
-          ls
-          gitleaks detect source . -r gitleaks-report.json -f json
+  # ====================================
+  #  Security & Lint Scan Job
+  # ====================================
+  security-scan:
+    name: Security Scan (Trivy + Gitleaks + Lint)
+    runs-on: ubuntu-latest
+    needs: setup-environment # Run after environment setup
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        
+      # --- Trivy Vulnerability Scan (using dedicated action) ---
+      - name: Trivy Scan (Filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
-      - name: Set up Python venv
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install flake8
+      - name: Upload Trivy results to GitHub Security
+        uses: github/code-scanning-upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      # --- Gitleaks Secret Scan (using dedicated action) ---
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use SARIF format for GitHub Security tab integration
+          output: 'gitleaks-results.sarif'
+          report: 'gitleaks-results.sarif'
+          
+      - name: Upload Gitleaks results to GitHub Security
+        uses: github/code-scanning-upload-sarif@v3
+        with:
+          sarif_file: 'gitleaks-results.sarif'
+          
+      # --- Flake8 Linting (using dedicated action) ---
+      - name: Download Python Artifacts (for Flake8)
+        # Needed if Flake8 is not installed globally or via an action
+        uses: actions/download-artifact@v4
+        with:
+          name: app-archive
+          path: .
+          
+      - name: Run Flake8 Lint
+        uses: py-actions/flake8@v2
+        with:
           # Exclude common folders: venv, env, __pycache__, .git, migrations
-          flake8 . --exclude=venv,env,__pycache__,.git,migrations > flake8-report.txt || true
-
-      - name: Upload lint report
-        uses: actions/upload-artifact@v4
-        with:
-          name: flake8-report
-          path: flake8-report.txt
-
+          args: "--exclude=venv,env,__pycache__,.git,migrations"
+          
   # ====================================
   #  Local Deploy Job
   # ====================================
   deploy:
     name: Deploy Streamlit App (Local)
     runs-on: ubuntu-latest
-    needs: security-scan  # run only after scan
-
+    needs: security-scan # run only after scan (and thus setup)
+    
     env:
       COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
       PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      - name: Download app archive
+        uses: actions/download-artifact@v4
+        with:
+          name: app-archive
+          path: .
       
-      - name: Deploy to GCP VM
+      - name: Deploy and Launch App via SSH
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.GCP_HOST }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           port: ${{ secrets.GCP_PORT || 22 }}
-          envs: COHERE_API_KEY,PINECONE_API_KEY
+          # Pass only the necessary envs to the remote server environment
+          envs: COHERE_API_KEY,PINECONE_API_KEY 
           script: |
             set -e
+            APP_DIR="rag-application"
 
             echo "Stopping existing Streamlit app..."
+            # Graceful stop attempt first, then kill if needed
             sudo fuser -k 8501/tcp || true
 
-            echo "Installing dependencies..."
-            #sudo apt update
-            sudo apt install -y python3 python3-venv python3-pip git curl
+            echo "Installing necessary system dependencies (if not present)..."
+            # Ensure basic tools are installed for venv and unzipping
+            sudo apt update
+            sudo apt install -y python3 python3-venv python3-pip git curl rsync tar
 
-            echo "present working directory"
-            pwd
-            ls
+            echo "Setting up application directory: $APP_DIR"
+            rm -rf $APP_DIR
+            mkdir -p $APP_DIR
 
-            echo "Removing old app..."
-            rm -rf rag-application
+            echo "Transferring and extracting latest application archive..."
+            # This uses rsync to push the tar.gz file efficiently
+            rsync -avz --progress app.tar.gz ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:~
+            tar -xzf app.tar.gz -C $APP_DIR
+            rm app.tar.gz # Clean up the archive on the VM
 
-            echo "Cloning latest repo..."
-            git clone https://github.com/pidcai/rag-application.git
-            cd rag-application
+            cd $APP_DIR
 
             echo "Setting up Python virtual environment..."
             python3 -m venv env
             source env/bin/activate
 
             echo "Installing requirements..."
+            # This will install requirements again on the VM, ensuring a clean state
             pip install --upgrade pip
             pip install -r requirements.txt
 
             echo "Launching Streamlit app..."
-            nohup bash -c 'COHERE_API_KEY="${{ secrets.COHERE_API_KEY }}" \
-            PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
-            streamlit run streamlit_ui.py > streamlit.log 2>&1 &'
+            # The envs are now available on the remote machine via appleboy/ssh-action
+            # The secrets are directly injected into the nohup command for process persistence
+            nohup bash -c 'source env/bin/activate && \
+              streamlit run streamlit_ui.py \
+              --server.port 8501 \
+              > streamlit.log 2>&1' &
 
-            echo " Streamlit deployment triggered!"
+            echo "Streamlit deployment triggered! Check logs for status."
