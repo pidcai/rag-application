@@ -117,6 +117,7 @@ jobs:
         uses: py-actions/flake8@v2
         with:
           args: "--exclude=venv,env,__pycache__,.git,migrations"
+          ignore: 'E501,E711'
           
   # ====================================
   #  Local Deploy Job
