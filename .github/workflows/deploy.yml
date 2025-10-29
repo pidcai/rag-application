@@ -78,29 +78,30 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3 # Correct action for SARIF upload
         with:
           sarif_file: 'trivy-results.sarif'
           
       # --- Gitleaks Secret Scan (using dedicated action) ---
       - name: Gitleaks Scan
-        uses: github/codeql-action/upload-sarif@v3
+        # 🚨 CORRECTION 1: Use the Gitleaks scanning action 🚨
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Use SARIF format for GitHub Security tab integration
-          output: 'gitleaks-results.sarif'
-          report: 'gitleaks-results.sarif'
+          # Tell Gitleaks to output the SARIF report to this file
+          report: 'gitleaks-results.sarif' 
+          # Note: The 'output' parameter is often redundant when using 'report'
           
       - name: Upload Gitleaks results to GitHub Security
-        uses: github/code-scanning-upload-sarif@v3
+        # 🚨 CORRECTION 2: Use the correct CodeQL action for SARIF upload 🚨
+        uses: github/codeql-action/upload-sarif@v3 
         with:
           sarif_file: 'gitleaks-results.sarif'
           
       - name: Run Flake8 Lint
         uses: py-actions/flake8@v2
         with:
-          # Exclude common folders: venv, env, __pycache__, .git, migrations
           args: "--exclude=venv,env,__pycache__,.git,migrations"
           
   # ====================================
