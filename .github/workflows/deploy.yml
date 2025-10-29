@@ -40,7 +40,7 @@ jobs:
 
       - name: Create app archive for deployment
         # Create a clean archive to be deployed to the remote VM
-        run: tar -czf app.tar.gz --exclude='./.git' --exclude='./env' .
+        run: tar -czf app.tar.gz --exclude='./.git' --exclude='./env' --exclude='./app.tar.gz' .
 
       - name: Upload app archive artifact
         uses: actions/upload-artifact@v4
