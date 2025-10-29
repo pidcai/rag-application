@@ -35,24 +35,30 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Trivy
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/trivy.list
-          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update -y
-          sudo apt-get install -y trivy
+      - name: Run Trivy static analysis
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          output: './trivy-fs-scan-results.output'
+          security-checks: 'vuln,secret,config'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
 
-      - name: Run Trivy full scan
+      - name: Store Trivy fs scan results in env
+        shell: bash
         run: |
-          trivy fs --scanners vuln --format table -o fs-report.json .
-          
+          {
+            echo "TRIVY_FS_RESULTS<<EOF"
+            cat ./trivy-fs-scan-results.output
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+                
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: fs-report.json
+          path: ./trivy-fs-scan-results.output
 
       - name: Gitleaks Code Scan
         run: gitleaks detect source . -r gitleaks-report.json -f json
