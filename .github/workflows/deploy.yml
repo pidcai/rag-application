@@ -84,17 +84,19 @@ jobs:
           
       # --- Gitleaks Secret Scan (using dedicated action) ---
       - name: Gitleaks Scan
-        # 🚨 CORRECTION 1: Use the Gitleaks scanning action 🚨
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           # Tell Gitleaks to output the SARIF report to this file
           report: 'gitleaks-results.sarif' 
-          # Note: The 'output' parameter is often redundant when using 'report'
+          
+      # --- DEBUG STEP: Verify file existence ---
+      - name: Verify Gitleaks SARIF File
+        run: |
+          ls -l gitleaks-results.sarif || echo "Gitleaks SARIF file not found!"
           
       - name: Upload Gitleaks results to GitHub Security
-        # 🚨 CORRECTION 2: Use the correct CodeQL action for SARIF upload 🚨
         uses: github/codeql-action/upload-sarif@v3 
         with:
           sarif_file: 'gitleaks-results.sarif'
