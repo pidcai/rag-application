@@ -82,9 +82,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Explicitly set the path to scan the current directory
+          path: .
+          # Ensure SARIF report is written to this file
           report: 'gitleaks-results.sarif' 
-          # 🟢 FIXED: Explicitly tell Gitleaks to scan the current directory
-          path: . 
           
       - name: Upload Gitleaks results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3 
