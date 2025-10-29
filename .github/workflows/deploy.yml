@@ -19,7 +19,7 @@ jobs:
   # ====================================
   security-scan:
     name: Security Scan (Trivy + Lint)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source code
@@ -36,29 +36,23 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Trivy static analysis
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          format: 'table'
-          output: './trivy-fs-scan-results.output'
-          security-checks: 'vuln,secret,config'
+          format: table
+          scan-ref: .
+          output: trivy-results.txt
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-
-      - name: Store Trivy fs scan results in env
-        shell: bash
-        run: |
-          {
-            echo "TRIVY_FS_RESULTS<<EOF"
-            cat ./trivy-fs-scan-results.output
-            echo "EOF"
-          } >> "$GITHUB_ENV"
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          # On a subsequent call to the action we know trivy is already installed so can skip this
+          skip-setup-trivy: true
                 
       - name: Upload Trivy scan report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: ./trivy-fs-scan-results.output
+          path: trivy-results.txt
 
       - name: Gitleaks Code Scan
         run: gitleaks detect source . -r gitleaks-report.json -f json
