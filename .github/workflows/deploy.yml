@@ -28,6 +28,12 @@ jobs:
       - name: Verify Python version
         run: python3 --version
 
+      - name: Sonar scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}          
+
       - name: Install dependencies
         run: |
           python3 -m venv env
