@@ -81,7 +81,7 @@ jobs:
   #  Local Deploy Job
   # ====================================
   deploy:
-    name: Deploy Streamlit App (Local)
+    name: Deploy Streamlit App
     runs-on: ubuntu-latest
     needs: security-scan  # run only after scan
 
