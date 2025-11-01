@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import rag_pipeline
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def mock_env(monkeypatch):
     """Mock environment variables for API keys."""
     monkeypatch.setenv("COHERE_API_KEY", "fake-cohere-key")
