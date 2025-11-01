@@ -41,7 +41,14 @@ jobs:
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --format=sarif --output-file=flake8-results.sarif --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Upload flake8 results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flake8-results
+          path: flake8-results.sarif
 
       - name: Test with pytest
         run: |
@@ -68,6 +75,13 @@ jobs:
           severity: 'HIGH,CRITICAL'
           format: 'sarif'
           output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-results
+          path: trivy-results.txt
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
