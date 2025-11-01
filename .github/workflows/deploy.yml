@@ -23,27 +23,42 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Verify Python version
-        run: python3 --version
-
-      - name: Sonar scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: Set up Python environment
+        uses: actions/setup-python@v6
         with:
-          args: >
-            -Dsonar.projectKey=sonar
-            -Dsonar.sources=.         
+          python-version: '3.13'
 
       - name: Install dependencies
         run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          python -m pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: |
+          pytest
+
+      # - name: Sonar scan
+      #   uses: SonarSource/sonarqube-scan-action@v6
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   with:
+      #     args: >
+      #       -Dsonar.projectKey=sonar
+      #       -Dsonar.sources=.
+
+
+      
 
       - name: Run Trivy static analysis
         run: |
@@ -63,29 +78,9 @@ jobs:
           name: trivy-report
           path: trivy-results.txt
 
-      - name: Gitleaks Code Scan
-        run: |
-          sudo apt-get install -y wget
-          wget https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
-          tar -xvzf gitleaks_8.28.0_linux_x64.tar.gz
-          rm gitleaks_8.28.0_linux_x64.tar.gz
-          sudo mv gitleaks /usr/local/bin/
-          gitleaks detect source . -r gitleaks-report.json -f json
-
-      - name: Set up Python venv
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install flake8
-          # Exclude common folders: venv, env, __pycache__, .git, migrations
-          flake8 . --exclude=venv,env,__pycache__,.git,migrations > flake8-report.txt || true
-
-      - name: Upload lint report
-        uses: actions/upload-artifact@v4
-        with:
-          name: flake8-report
-          path: flake8-report.txt
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ====================================
   #  Local Deploy Job
