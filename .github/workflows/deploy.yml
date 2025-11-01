@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 pytest
+          python -m pip install flake8 flake8-sarif pytest 
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Lint with flake8
@@ -41,14 +41,7 @@ jobs:
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --format=sarif --output-file=flake8-results.sarif --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - name: Upload flake8 results as artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: flake8-results
-          path: flake8-results.sarif
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
         run: |
@@ -66,15 +59,15 @@ jobs:
       #       -Dsonar.sources=.
 
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (Table)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
           ignore-unfixed: true
           severity: 'HIGH,CRITICAL'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'table'
+          output: 'trivy-results.txt'
 
       - name: Upload Trivy results
         uses: actions/upload-artifact@v4
