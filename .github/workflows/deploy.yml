@@ -45,7 +45,8 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest -v
 
       # - name: Sonar scan
       #   uses: SonarSource/sonarqube-scan-action@v6
