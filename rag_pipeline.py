@@ -3,8 +3,14 @@
 # Command Rplus api
 # from langchain_cohere.llms import Cohere
 import os
+# from langchain_groq import ChatGroq
+import requests
+import streamlit as st
 
 from dotenv import load_dotenv
+from langchain_cohere import CohereEmbeddings
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 
 # Load local .env only if it exists
 if os.path.exists(".env"):
@@ -14,12 +20,6 @@ if os.path.exists(".env"):
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
-# from langchain_groq import ChatGroq
-import requests
-import streamlit as st
-from langchain_cohere import CohereEmbeddings
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
 
 proxies = {
     "http": None,
