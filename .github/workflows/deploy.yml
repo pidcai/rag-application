@@ -1,9 +1,13 @@
 name: Streamlit RAG App CI/CD (Trivy + Deploy)
 
 on:
-  push:
-    branches:
-      - main
+  #push:
+  #  branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -48,15 +52,15 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           pytest -v
 
-      # - name: Sonar scan
-      #   uses: SonarSource/sonarqube-scan-action@v6
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      #   with:
-      #     args: >
-      #       -Dsonar.projectKey=sonar
-      #       -Dsonar.sources=.
+      - name: Sonar scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=sonar
+            -Dsonar.sources=.
 
 
       - name: Run Trivy vulnerability scanner (Table)
