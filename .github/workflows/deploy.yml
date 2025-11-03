@@ -29,6 +29,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v5
         with:
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0  # important for Gitleaks
 
       - name: Set up Python environment
@@ -63,7 +64,6 @@ jobs:
           args: >
             -Dsonar.projectKey=sonar
             -Dsonar.sources=.
-
 
       - name: Run Trivy vulnerability scanner (Table)
         uses: aquasecurity/trivy-action@master
@@ -101,6 +101,7 @@ jobs:
     name: Deploy Streamlit App
     runs-on: ubuntu-latest
     needs: security-scan  # run only after scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # ✅ only run after merge to main
 
     env:
       COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
