@@ -116,7 +116,7 @@ jobs:
           host: ${{ secrets.GCP_HOST }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
-          port: ${{ secrets.GCP_PORT || 22 }}
+          #port: ${{ secrets.GCP_PORT || 22 }}
           envs: COHERE_API_KEY,PINECONE_API_KEY
           script: |
             set -e
