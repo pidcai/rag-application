@@ -82,9 +82,17 @@ jobs:
           name: trivy-results
           path: trivy-results.txt
 
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Gitleaks Security Scan
+        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload results (only if secrets found)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: results.sarif
 
   # ====================================
   #  Deploy Job
