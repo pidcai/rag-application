@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # important for Gitleaks
 
       - name: Set up Python environment
         uses: actions/setup-python@v6
