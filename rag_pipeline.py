@@ -84,7 +84,7 @@ def generate_with_deepseek(cohere_rag_prompt):
         proxies=proxies,
         headers={"Content-Type": "application/json"},
         json={
-            "model": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+            "model": "meta-llama/Llama-3.2-3B-Instruct",
             "messages": cohere_rag_prompt,
             "max_tokens": 512,
             "temperature": 0,
@@ -92,5 +92,5 @@ def generate_with_deepseek(cohere_rag_prompt):
         timeout=10,  # <-- Add a timeout in seconds
     ).json()
     result = response["choices"][0]["message"]["content"]
-    result = result.split("</think>")
-    return result[1]
+    #result = result.split("</think>")    #this line for deepseek models
+    return result#[1]  [1] for deepseek models
