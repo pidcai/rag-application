@@ -26,6 +26,10 @@ if [ ! -d "env" ]; then
 fi
 source env/bin/activate
 
+pip install vllm
+
+vllm serve meta-llama/Llama-3.2-3B-Instruct --download-dir /home/models --max-model-len 4096
+
 echo "Installing requirements..."
 pip install --upgrade pip
 pip install -r requirements.txt
